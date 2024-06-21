@@ -38,7 +38,6 @@ func NewServer() *App {
 	return server
 }
 
-// setUpRoutes defines the endpoints, attaches them to a server, and starts listening and serving HTTP requests
 func (a *App) setUpRoutes() {
 	r := a.Router
 	store := persistence.NewInMemoryStore(expiration)
