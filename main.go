@@ -5,12 +5,15 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strings"
+	"time"
 
+	"github.com/gin-contrib/cache"
+	"github.com/gin-contrib/cache/persistence"
 	"github.com/gin-gonic/gin"
 )
 
 var pvBaseUrl = "https://phinvads.cdc.gov/baseStu3"
+var expiration = 3 * time.Second
 
 type App struct {
 	Port   string
@@ -38,38 +41,47 @@ func NewServer() *App {
 // setUpRoutes defines the endpoints, attaches them to a server, and starts listening and serving HTTP requests
 func (a *App) setUpRoutes() {
 	r := a.Router
+	store := persistence.NewInMemoryStore(expiration)
 
+	// Regular Ping
 	r.GET("/ping", func(c *gin.Context) {
 		c.JSON(200, gin.H{
-			"message:": "pong",
+			"pong": fmt.Sprint(time.Now().Format("Jan 02, 2006 @ 3:04:05 PM")),
 		})
 	})
+	// Cached Ping
+	r.GET("/cache_ping", cache.CachePage(store, expiration, func(c *gin.Context) {
+
+		c.JSON(200, gin.H{
+			"pong": fmt.Sprint(time.Now().Format("Jan 02, 2006 @ 3:04:05 PM")),
+		})
+	}))
 
 	pv := r.Group("phinvads")
+	// Regular PV Page
+	pv.GET("/ValueSet/:id", PhinVadsHandler)
+	// Cached PV Page
+	pv.GET("/cache/ValueSet/:id", cache.CachePage(store, expiration, PhinVadsHandler))
+}
 
-	pv.GET("/ValueSet/:id", func(c *gin.Context) {
-		url := formatUrl(c)
-		result, err := get(url, c)
+func PhinVadsHandler(c *gin.Context) {
+	url := formatUrl(c)
+	result, err := get(url, c)
 
-		if err != nil {
-			handleErrorResponse(err)
-		}
+	if err != nil {
+		handleErrorResponse(err)
+	}
 
-		handleJsonResponse(result, c)
-	})
+	handleJsonResponse(result, c)
 }
 
 func formatUrl(c *gin.Context) string {
 	id := c.Param("id")
-	path := c.Request.URL
-	path.Opaque = "opaque"
-
 	url := fmt.Sprintf("%s/ValueSet/%s", pvBaseUrl, id)
-
-	queryParams := strings.Split(c.Request.URL.String(), "opaque")[1]
+	queryParams := c.Request.URL.RawQuery
 
 	if queryParams != "" {
-		url += queryParams
+		url += "?" + queryParams
 	}
 
 	return url
