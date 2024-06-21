@@ -46,7 +46,7 @@ An invalid request should return a plaintext error.
 
 #### Example Requests
 
-| Request                                    | Response 2                                                        |
+| Request                                    | Response                                                        |
 | ------------------------------------------ | ----------------------------------------------------------------- |
 | `/phinvads/cache/ValueSet/PH`              | returns the ValueSet named **PHVS_CountrySubdivision_ISO_3166-2** |
 | `/phinvads/cache/ValueSet/bananas`         | "ValueSet Name:bananas not found "                                |
